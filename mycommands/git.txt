@@ -1,2 +1,10 @@
-alias mygit='git'
-alias mygit-s='git status'
+mygit() {
+    case "$1" in
+        commit|push|status)
+            git "$@"
+            ;;
+        *)
+            echo "Unknown command. Usage: mygit [commit|push|status]"
+            ;;
+    esac
+}
