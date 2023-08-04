@@ -1,10 +1,31 @@
 mygit() {
     case "$1" in
-        commit|push|status)
+        commit)
+            if [ "$2" = "one" ]; then
+                THIS_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+                shift 2
+                git commit -m "$THIS_BRANCH" "$@" -n
+            else
+                shift
+                git commit "$@"
+            fi
+            ;;
+        push|status)
             git "$@"
             ;;
+        this)
+            case "$2" in
+                b)
+                    THIS_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+                    echo "THIS_BRANCH: $THIS_BRANCH"
+                    ;;
+                *)
+                    echo "Unknown command. Usage: mygit this [b]"
+                    ;;
+            esac
+            ;;
         *)
-            echo "Unknown command. Usage: mygit [commit|push|status]"
+            echo "Unknown command. Usage: mygit [commit|push|status|this]"
             ;;
     esac
 }
