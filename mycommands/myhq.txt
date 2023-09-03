@@ -27,24 +27,16 @@ add_task() {
   clear
 }
 
-install_task() {
-  local task_path="$1"
-  for subfolder in "$task_path"/*/; do
-    (
-      cd "$subfolder"
-      yarn install --ignore-engines
-      if [ "$(basename "$subfolder")" != "hq-shared" ]; then
-        link_hq_shared "$task_path" "$subfolder"
-      fi
-    ) &
-  done
-}
-
 link_hq_shared() {
   local task_path="$1"
   local folder_path="$2"
   local source_path="$task_path/hq-shared"
   local target_path="$folder_path/node_modules/hq-shared"
+
+  # if target_path exists, remove it
+  if [ -d "$target_path" ]; then
+    rm -rf "$target_path"
+  fi
 
   cd
   rm -rf "$target_path"
@@ -55,11 +47,11 @@ link_hq_shared() {
 
 link_node_modules() {
   local base_path="/Users/jaya/myhq/dev/base"
-  local folder_name="$1"
-  local target_repo_path="$2"
+  local task_path="$1"
+  local folder_name="$2"
 
   local source_path="$base_path/$folder_name/node_modules"
-  local target_path="$target_repo_path/node_modules"
+  local target_path="$task_path/$folder_name/node_modules"
 
   if [ ! -d "$target_path" ]; then
     mkdir "$target_path"
@@ -75,6 +67,19 @@ link_node_modules() {
 
 lnm() {
   link_node_modules "${@:1}"
+}
+
+install_task() {
+  local task_path="$1"
+  for subfolder in "$task_path"/*/; do
+    (
+      cd "$subfolder"
+      link_node_modules "$task_path" "$(basename "$subfolder")"
+      if [ "$(basename "$subfolder")" != "hq-shared" ]; then
+        link_hq_shared "$task_path" "$subfolder"
+      fi
+    ) &
+  done
 }
 
 
