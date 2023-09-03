@@ -9,10 +9,10 @@ ALIASES_DIR="$(dirname "$0")/mycommands"
 for file in "$ALIASES_DIR"/*; do
     if [[ -f "$file" ]]; then
         cat "$file" >> "$HOME/.mybash"
+        echo "" >> "$HOME/.mybash"  # Add a newline to separate functions
     fi
 done
 
 # Append the sourcing line to ~/.zshrc and ~/.bashrc
 echo "source ~/.mybash" >> "$HOME/.zshrc"
 echo "source ~/.mybash" >> "$HOME/.bashrc"
-

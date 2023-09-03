@@ -1,0 +1,423 @@
+add_task() {
+  base_path="/Users/jaya/myhq/dev/base/"
+  tasks_path="/Users/jaya/myhq/dev/tasks"
+  task_name="$1"
+  task_path="$tasks_path/$task_name"
+
+  # Loop through each folder in base_path
+  for folder in "$base_path"/*/; do
+    cd "$base_path"
+    # Get the folder name without path
+    folder_name=$(basename "$folder")
+
+    # Change the working directory to the repository
+    cd "$folder_name"
+
+    # Run below mygit command with the task_name and tasks_path to create worktree
+    mygit wt -a "$task_name" "$task_path/$folder_name"
+
+  done
+
+  # Call make_ws function
+  cd "$task_path"
+  make_ws
+  install_task "$task_path"
+
+  wait
+  clear
+}
+
+install_task() {
+  local task_path="$1"
+  for subfolder in "$task_path"/*/; do
+    (
+      cd "$subfolder"
+      yarn install --ignore-engines
+      if [ "$(basename "$subfolder")" != "hq-shared" ]; then
+        link_hq_shared "$task_path" "$subfolder"
+      fi
+    ) &
+  done
+}
+
+link_hq_shared() {
+  local task_path="$1"
+  local folder_path="$2"
+  local source_path="$task_path/hq-shared"
+  local target_path="$folder_path/node_modules/hq-shared"
+
+  cd
+  rm -rf "$target_path"
+  ln -s "$source_path" "$target_path"
+  cd -
+}
+
+
+link_node_modules() {
+  local base_path="/Users/jaya/myhq/dev/base"
+  local folder_name="$1"
+  local target_repo_path="$2"
+
+  local source_path="$base_path/$folder_name/node_modules"
+  local target_path="$target_repo_path/node_modules"
+
+  if [ ! -d "$target_path" ]; then
+    mkdir "$target_path"
+  fi
+
+  cd
+  for item in "$source_path"/*; do
+      local link_name=$(basename "$item")
+      ln -s "$source_path/$link_name" "$target_path/$link_name"
+  done
+  cd -
+}
+
+lnm() {
+  link_node_modules "${@:1}"
+}
+
+
+delete_task() {
+  base_path="/Users/jaya/myhq/dev/base"
+  tasks_path="/Users/jaya/myhq/dev/tasks"
+  task_name="$1"
+
+  # Loop through each folder in tasks_path/task_name
+  for folder in "$tasks_path/$task_name"/*/; do
+    # Get the folder name without path
+    folder_name=$(basename "$folder")
+
+    # Change the working directory to the repository
+    cd "$base_path/$folder_name"  # Corrected path here
+
+    # stash and remove the worktree
+    git stash push -m "delete_task/$task_name"
+    mygit wt -df "$tasks_path/$task_name/$folder_name"
+  done
+
+  # Return to tasks_path
+  cd "$tasks_path"
+
+  # Remove the task directory
+  rm -rf "$task_name"
+
+  # Delete workspace for the task
+  delete_ws "$task_name"
+
+  # cd to root
+  cd
+  clear
+}
+
+refresh_base() {
+  local base_path="/Users/jaya/myhq/dev/base"
+  hq_shared_path="/Users/jaya/myhq/dev/base/hq-shared/"
+
+  # Define color codes
+  green="\e[32m"
+  yellow="\e[33m"
+  red="\e[31m"
+  reset="\e[0m"
+
+  # Create an array to store background process IDs
+  declare -a pids
+
+  # Loop through all subdirectories of the base path and refresh the base
+  for dir in "$base_path"/*/; do
+    # cd into the directory
+    (
+      cd "$dir" || exit
+
+      # Print job starting log in yellow
+      echo -e "${yellow}Starting job for $dir${reset}"
+
+      # Refresh the base
+      git stash push -m "refresh_base"
+      git pull origin dev-master
+      rm -rf node_modules yarn.lock
+      yarn install --ignore-engines
+
+      # Print job successful log in green
+      echo -e "${green}Job completed for $dir${reset}"
+
+      # Add the process ID to the array
+      pids+=($!)
+
+      # cd back to the original directory
+      cd - || exit
+    ) &
+  done
+
+  # Wait for all background processes to finish
+  for pid in "${pids[@]}"; do
+    wait "$pid"
+  done
+
+  # Print "All jobs completed" message in green
+  echo -e "${green}All jobs completed${reset}"
+}
+
+refresh_fe() {
+  local fe_path="/Users/jaya/myhq/dev/fe"
+
+  # Define color codes
+  green="\e[32m"
+  yellow="\e[33m"
+  red="\e[31m"
+  reset="\e[0m"
+
+  # Create an array to store background process IDs
+  declare -a pids
+
+  # Loop through all subdirectories of the fe_path and refresh
+  for dir in "$fe_path"/*/; do
+    # cd into the directory
+    (
+      cd "$dir" || exit
+
+      # Print job starting log in yellow
+      echo -e "${yellow}Starting job for $dir${reset}"
+
+      # Refresh the base
+      git stash push -m "refresh_fe"
+      mygit pull
+      npm i
+
+      # Print job successful log in green
+      echo -e "${green}Job completed for $dir${reset}"
+
+      # Add the process ID to the array
+      pids+=($!)
+
+      # cd back to the original directory
+      cd - || exit
+    ) &
+  done
+
+  # Wait for all background processes to finish
+  for pid in "${pids[@]}"; do
+    wait "$pid"
+  done
+
+  # Print "All jobs completed" message in green
+  echo -e "${green}All jobs completed${reset}"
+}
+
+shutdown_fe() {
+  # Array of hardcoded port numbers for frontend processes
+  declare -a frontend_ports=("4200" "4202" "4242", "3400")
+
+  # Iterate through each port
+  for port in "${frontend_ports[@]}"; do
+    local pids=$(lsof -i ":$port" | grep "node" | awk '{print $2}' | sort -u)  # Get unique PIDs of node processes on the specified port
+
+    # Remove newline characters and iterate through each PID to kill the associated process
+    for pid in $pids; do
+      pid=$(echo "$pid" | tr -d '\n')  # Remove newline characters
+      if [ -n "$pid" ]; then
+        kill "$pid"  # Kill the node process with the given PID
+      fi
+    done
+  done
+}
+
+
+span_fe() {
+  local fe_path="/Users/jaya/myhq/dev/fe"
+
+  #shutdown all frontend processes
+  shutdown_fe
+  wait
+
+  # Define color codes
+  green="\e[32m"
+  yellow="\e[33m"
+  red="\e[31m"
+  reset="\e[0m"
+
+  # Create an array to store background process IDs
+  declare -a pids
+
+  # Loop through all subdirectories of the fe_path and start the frontend
+  for dir in "$fe_path"/*/; do
+    # cd into the directory
+    (
+      cd "$dir" || exit
+
+      # Print job starting log in yellow
+      echo -e "${yellow}Starting frontend for $dir${reset}"
+
+      # Start frontend
+      if [ "$(basename "$dir")" = "hq-supply-react" ]; then
+        npm run start:local
+      else
+        npm run start
+      fi
+      
+      
+      # Print job successful log in green
+      echo -e "${green}Frontend started for $dir${reset}"
+
+      # Add the process ID to the array
+      pids+=($!)
+
+      # cd back to the original directory
+      cd - || exit
+    ) &
+  done
+
+  # Wait for all background processes to finish
+  for pid in "${pids[@]}"; do
+    wait "$pid"
+  done
+
+  # Print "All frontend jobs completed" message in green
+  echo -e "${green}All frontend jobs completed${reset}"
+}
+
+handle_fe() {
+  if [ $# -eq 0 ]; then
+    cd "/Users/jaya/myhq/dev/fe"
+    return
+  fi
+
+  case "$1" in
+    refresh)
+      refresh_fe
+      ;;
+    on)
+      span_fe
+      ;;
+    off)
+      shutdown_fe
+      ;;
+    *)
+      echo "Unknown command. Usage: myhq fe [refresh|span|shutdown]"
+      ;;
+  esac
+}
+
+redis_span() {
+  local myhq_redis_conf_path="/Users/jaya/myhq/dev/redis.conf"
+  redis-server "$myhq_redis_conf_path" &
+}
+
+redis_shutdown() {
+  local redis_pid=$(lsof -t -i ":4800")
+
+  if [[ -n "$redis_pid" ]]; then
+    kill "$redis_pid"
+  fi
+}
+
+redis_server() {
+  case "$1" in
+    on)
+      redis_span
+      ;;
+    off)
+      redis_shutdown
+      ;;
+    *)
+      echo "Unknown command. Usage: myhq redis-server [on|off]"
+      ;;
+  esac
+}
+
+open_workspaces() {
+  workspace_list_path="/Users/jaya/myhq/dev/vsCodeWorkspaces"
+  open "$workspace_list_path"
+}
+
+rebase_task() {
+  local tasks_path="/Users/jaya/myhq/dev/tasks"
+
+  local child_task_name="$1"
+  local parent_task_name="$2"
+
+  local child_task_path="$tasks_path/$child_task_name"
+
+  for folder in "$child_task_path"/*/; do
+    cd "$folder"
+    git rebase "$parent_task_name"
+  done 
+}
+
+reset_head() {
+  local tasks_path="/Users/jaya/myhq/dev/tasks"
+
+  local child_task_name="$1"
+  local parent_task_name="$2"
+
+  local child_task_path="$tasks_path/$child_task_name"
+
+  for folder in "$child_task_path"/*/; do
+    cd "$folder"
+    git reset --soft "$parent_task_name"
+  done 
+}
+
+squash_task_commits() {
+  local tasks_path="/Users/jaya/myhq/dev/tasks"
+
+  local task_name="$1"
+  local task_path="$tasks_path/$task_name"
+
+  for folder in "$task_path"/*/; do
+    cd "$folder"
+    git reset --soft HEAD~2
+    git commit -m "$task_name"
+  done
+}
+
+push_tasks() {
+  local tasks_path="/Users/jaya/myhq/dev/tasks"
+  local task_name="$1"
+  local force_push="$2"
+  local task_path="$tasks_path/$task_name"
+
+  for folder in "$task_path"/*/; do
+    cd "$folder"
+    mygit push $force_push
+  done
+}
+
+
+myhq() {
+    case "$1" in
+        add)
+            add_task "${@:2}"
+            ;;
+        delete)
+            delete_task "${@:2}"
+            ;;
+        rebase)
+            rebase_task "${@:2}"
+            ;;
+        reset_head)
+            reset_head "${@:2}"
+            ;;
+        squash)
+            squash_task_commits "${@:2}"
+            ;;
+        push)
+            push_tasks "${@:2}"
+            ;;
+        refresh_base)
+            refresh_base "${@:2}"
+            ;;
+        fe)
+            handle_fe "${@:2}"
+            ;;
+        redis)
+            redis_server "${@:2}"
+            ;;
+        ws)
+            open_workspaces "${@:2}"
+            ;;
+        *)
+            echo "Unknown command. Usage: myhq [add|delete|refresh_base]"
+            ;;
+    esac
+}

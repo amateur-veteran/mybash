@@ -1,0 +1,24 @@
+handle_ssh() {
+  case "$1" in
+    "key")
+      cat ~/.ssh/id_rsa.pub
+      ;;
+    "config")
+      vi ~/.ssh/config
+      ;;
+    *)
+      echo "Unknown command. Usage: myhq ssh [key]"
+      ;;
+  esac
+}
+
+jaya() {
+  case "$1" in
+    ssh)
+      handle_ssh "${@:2}"
+      ;;
+    *)
+      echo "Unknown command. Usage: myhq [ssh]"
+      ;;
+  esac
+}

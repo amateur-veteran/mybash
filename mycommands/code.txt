@@ -1,0 +1,40 @@
+make_ws() {
+  workspace_list_path="/Users/jaya/myhq/dev/vsCodeWorkspaces"
+  current_folder="$(basename "$(pwd)")"
+  output_file="${1:-$current_folder.code-workspace}"
+
+  echo '{"folders": [' > "$output_file"
+  for dir in $(ls -d */); do
+    echo '    {"path": "'"$PWD/$dir"'"},' >> "$output_file"
+  done
+  echo '  ]}' >> "$output_file"
+
+  # make a copy of output_file in main ws folder
+  cp "$output_file" "$workspace_list_path/$output_file"
+}
+
+delete_ws() {
+  workspace_list_path="/Users/jaya/myhq/dev/vsCodeWorkspaces"
+
+  workspace_name="$1"
+  workspace_path="$workspace_list_path/$workspace_name.code-workspace"
+
+  if [ -f "$workspace_path" ]; then
+    rm "$workspace_path"
+  else
+    echo "Workspace $workspace_name does not exist"
+  fi
+}
+
+open_ws() {
+  workspace_list_path="/Users/jaya/myhq/dev/vsCodeWorkspaces"
+
+  workspace_name="$1"
+  workspace_path="$workspace_list_path/$workspace_name.code-workspace"
+
+  if [ -f "$workspace_path" ]; then
+    code "$workspace_path"
+  else
+    echo "Workspace $workspace_name does not exist"
+  fi
+}

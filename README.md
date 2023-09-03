@@ -17,8 +17,8 @@ From this root path, do `chmod +x setup.sh unset.sh`. This will make these shell
 
 ### Implemented
 * git like command
+* make first commit with branche's name
 ### Yet to..
-* make first commit with branches name
 * push current branch with some options (--no-verify - for now this is needed)
 * copy current branch name
 

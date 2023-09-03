@@ -13,15 +13,53 @@ commit_changes() {
     fi
 }
 
+pop_commit() {
+  local reset_mode="--soft"
+  local commit_count=1
+
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      -m)
+        shift
+        reset_mode="$1"
+        ;;
+      -n)
+        shift
+        commit_count="$1"
+        ;;
+      *)
+        echo "Invalid argument: $1"
+        return 1
+        ;;
+    esac
+    shift
+  done
+
+  git reset "$reset_mode" "HEAD~$commit_count"
+}
+
+handle_commit() {
+  case "$1" in
+    pop)
+      pop_commit "${@:2}"
+      ;;
+    *)
+
+      # If no arguments, Call commit_changes with all arguments
+      commit_changes "$@"
+      ;;
+  esac
+}
+
 push_changes() {
     local this_branch=$(get_current_branch)
-    
-    if [ "$1" = "this" ] && [ "$2" = "b" ]; then
-        shift 2
-        git push origin "$this_branch" "$@" --no-verify
-    else
-        git push "$@"
+    local force_push=""
+
+    if [ "$1" = "-f" ]; then
+        force_push="-f"
     fi
+
+    git push origin $force_push "$this_branch" --no-verify
 }
 
 pull_changes() {
@@ -112,7 +150,7 @@ add_or_delete_worktree() {
 mygit() {
     case "$1" in
         commit)
-            commit_changes "${@:2}"
+            handle_commit "${@:2}"
             ;;
         push)
             push_changes "${@:2}"
