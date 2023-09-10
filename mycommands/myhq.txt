@@ -74,7 +74,8 @@ install_task() {
   for subfolder in "$task_path"/*/; do
     (
       cd "$subfolder"
-      link_node_modules "$task_path" "$(basename "$subfolder")"
+      rm -rf node_modules yarn.lock
+      yarn install --ignore-engines
       if [ "$(basename "$subfolder")" != "hq-shared" ]; then
         link_hq_shared "$task_path" "$subfolder"
       fi
