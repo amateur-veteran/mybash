@@ -211,11 +211,20 @@ handle_set_repo_origin() {
     # Extract the current repository's remote URL
     local current_remote_url=$(git config --get remote.origin.url)
 
-    # Extract the username or organization and repository name from the URL
+    # Debug: Print the current remote URL
+    echo "Current remote URL: $current_remote_url"
+
+    # Remove any existing 'git@mygit:' prefixes to avoid duplication
+    current_remote_url=$(echo "$current_remote_url" | sed -E 's|^(git@mygit:)+||')
+
+    # Extract the username or organization and repository name from the cleaned URL
     local repo_info=$(echo "$current_remote_url" | sed -E 's|.*[:/]([^/]+/[^/]+)\.git$|\1|')
 
     # Construct the new remote URL
     local new_remote_url="git@mygit:$repo_info"
+
+    # Debug: Print the new remote URL to be set
+    echo "New remote URL to set: $new_remote_url"
 
     # Set the new remote URL as the origin
     git remote set-url origin "$new_remote_url"
