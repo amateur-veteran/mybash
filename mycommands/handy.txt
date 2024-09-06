@@ -1,0 +1,57 @@
+cl() {
+  clear
+}
+
+ccl() {
+  cd && clear
+}
+
+ns() {
+  node index.js
+}
+
+nps() {
+  npm run start
+}
+
+npi() {
+  npm i --legacy-peer-deps "$@"
+}
+
+npu() {
+  npm update --legacy-peer-deps "$@"
+}
+
+nv() {
+  if [ -z "$1" ]; then
+    export NODE_ENV=development
+  elif [ "$1" = "p" ]; then
+    export NODE_ENV=production
+  elif [ "$1" = "d" ]; then
+    export NODE_ENV=development
+  elif [ "$1" = "q" ]; then
+    export NODE_ENV=qa
+  elif [ "$1" = "w" ]; then
+    echo $NODE_ENV
+  else
+    echo "Error: Invalid environment. Usage: nv [p|d|q|w]"
+    return 1
+  fi
+}
+
+clns() {
+  clear
+  node index.js
+}
+
+clnps() {
+  clear
+  npm run start
+}
+
+npt() {
+  export NODE_ENV=development
+  echo $NODE_ENV
+  npm run test
+}
+

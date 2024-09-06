@@ -31,7 +31,7 @@ From this root path, do `chmod +x setup.sh unset.sh`. This will make these shell
 * span BE admin (should do both bff and server)
 * add debug option for span command
 * span BE server
-* clean and perform yarn install
+* clean and perform npm i --legacy-peer-deps
 * span FE supply
 * span BE supply (should do both bff and server)
 
