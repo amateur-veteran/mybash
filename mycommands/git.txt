@@ -204,6 +204,7 @@ handle_clone() {
 handle_set_repo_user() {
     git config user.name "amateur-veteran"
     git config user.email "soggymaggi@gmail.com"
+    echo "User set to amateur-veteran"
 }
 
 handle_set_repo_origin() {
