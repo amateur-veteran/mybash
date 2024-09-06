@@ -223,6 +223,11 @@ handle_set_repo_origin() {
     echo "Remote origin set to $new_remote_url"
 }
 
+handle_use_mygit() {
+    handle_set_repo_user
+    handle_set_repo_origin
+}
+
 
 mygit() {
     case "$1" in
@@ -265,6 +270,10 @@ mygit() {
         set-repo-origin)
             shift
             handle_set_repo_origin "$@"
+            ;;
+        use-mygit)
+            shift
+            handle_use_mygit "$@"
             ;;
         clone)
             shift
