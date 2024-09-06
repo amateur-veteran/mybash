@@ -202,13 +202,24 @@ handle_clone() {
 }
 
 handle_set_repo_user() {
-    if [ -z "$1" ] || [ -z "$2" ]; then
-        echo "Error: Both name and email must be provided. Usage: handle_set_repo_user <name> <email>"
-        return 1
-    fi
+    git config user.name "amateur-veteran"
+    git config user.email "soggymaggi@gmail.com"
+}
 
-    git config user.name "$1"
-    git config user.email "$2"
+handle_set_repo_origin() {
+    # Extract the current repository's remote URL
+    local current_remote_url=$(git config --get remote.origin.url)
+
+    # Extract the username or organization and repository name from the URL
+    local repo_info=$(echo "$current_remote_url" | sed -E 's|.*[:/]([^/]+/[^/]+)\.git$|\1|')
+
+    # Construct the new remote URL
+    local new_remote_url="git@mygit:$repo_info"
+
+    # Set the new remote URL as the origin
+    git remote set-url origin "$new_remote_url"
+
+    echo "Remote origin set to $new_remote_url"
 }
 
 
@@ -250,11 +261,16 @@ mygit() {
             shift
             handle_set_repo_user "$@"
             ;;
+        set-repo-origin)
+            shift
+            handle_set_repo_origin "$@"
+            ;;
         clone)
             shift
             handle_clone "$@"
+            ;;
         *)
-            echo "Unknown command. Usage: mygit [commit|push|pull|status|this|is|wt]"
+            echo "Unknown command. Usage: mygit [commit|push|pull|status|this|is|wt|clone|set-repo-user]"
             ;;
     esac
 }
