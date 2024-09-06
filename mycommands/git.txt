@@ -8,6 +8,9 @@ commit_changes() {
     if [ "$1" = "one" ]; then
         shift
         git commit -m "$this_branch" "$@"
+    elif [ "$1" = "test" ]; then
+        shift
+        git commit -m "testing $this_branch" "$@"
     else
         git commit "$@"
     fi
@@ -146,6 +149,68 @@ add_or_delete_worktree() {
     fi
 }
 
+pch() {
+    local pch_state="$1"
+
+    case "$pch_state" in
+        on)
+            git config --unset core.hooksPath
+            ;;
+        off)
+            git config core.hooksPath /dev/null
+            ;;
+        *)
+            echo "Unknown command. Usage: pch [on|off]"
+            ;;
+    esac
+}
+
+handle_stash() {
+    local stash_action = "$1"
+    local patch_name="$2"
+    local patch_path="$3"
+
+    if [ -z "$patch_path" ]; then
+        patch_path="."
+    fi
+    local patch_file_path="$patch_path/$patch_name.patch"
+
+    case "$stash_action" in
+        save)
+            git stash show -p > "$patch_file_path"
+            ;;
+        apply)
+            git apply "$patch_file_path"
+            ;;
+        *)
+            echo "Unknown command. Usage: stash [save|apply|pop] <patch_name> [patch_path]"
+            ;;
+    esac
+}
+
+handle_clone() {
+    # Check if the repository argument is provided
+    if [ -z "$1" ]; then
+        echo "Error: No repository specified. Usage: handle_clone <org/repo>"
+        return 1
+    fi
+
+    local hostname="mygit"
+    local repo="$1"
+
+    git clone "git@$hostname:$repo.git"
+}
+
+handle_set_repo_user() {
+    if [ -z "$1" ] || [ -z "$2" ]; then
+        echo "Error: Both name and email must be provided. Usage: handle_set_repo_user <name> <email>"
+        return 1
+    fi
+
+    git config user.name "$1"
+    git config user.email "$2"
+}
+
 
 mygit() {
     case "$1" in
@@ -173,6 +238,21 @@ mygit() {
             shift
             add_or_delete_worktree "$@"
             ;;
+        pch)
+            shift
+            pch "$@"
+            ;;
+        stash)
+            shift
+            handle_stash "$@"
+            ;;
+        set-repo-user)
+            shift
+            handle_set_repo_user "$@"
+            ;;
+        clone)
+            shift
+            handle_clone "$@"
         *)
             echo "Unknown command. Usage: mygit [commit|push|pull|status|this|is|wt]"
             ;;
